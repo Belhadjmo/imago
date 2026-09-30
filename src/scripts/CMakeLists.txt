@@ -18,7 +18,7 @@ set (SCRIPTS
    collectSYBD.py condense.py curation_manifest.py
    deadmd.py dump2skl.py
    element_data.py element_pct.py expand_manifest.py
-   graspElems.py
+   graspElems.py gr_neutron.py
    guidance_db.py guidance_harvest.py guidance_promote.py
    hdf5Comp.py
    imago.py initial_potential_db.py insert3cbo.py interFit.py
@@ -36,6 +36,7 @@ set (SCRIPTS
    symmetry.py
    tidy_scratch.py
    unpackImagoDB.py
+   validity_gate.py
    vasp2skl.py viewCell.py
    xyz2skl.py)
 

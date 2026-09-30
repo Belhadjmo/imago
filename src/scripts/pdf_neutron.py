@@ -3,11 +3,11 @@
 ## Copyright (c) 2026 Mohammed Belhadj Larbi
 
 """
-gr_neutron.py -- normalised, optionally neutron-weighted pair distribution
+pdf_neutron.py -- normalised, optionally neutron-weighted pair distribution
 function of a periodic model.
 
 USAGE:
-    gr_neutron.py [-i imago.skl] [-o gr_neutron.plot] [-rmax 10.0]
+    pdf_neutron.py [-i imago.skl] [-o pdf_neutron.plot] [-rmax 10.0]
                   [-dr 0.01] [-sigma 0.05] [-weighting neutron|none]
                   [-function G|g] [-full]
 
@@ -16,10 +16,17 @@ Reads an imago skeleton file (the `cell` a b c alpha beta gamma line and a
 out to rmax including periodic images, and writes two columns: r and the
 requested function.
 
-Why this exists (dead-md_dev/DIAGNOSIS.md, 2026-09-23): the legacy `rpdf`
-divides the pair histogram by N r^2 only, not by 4 pi rho dr, so its
-large-r level is proportional to the model's number density instead of 1,
-and it weights every pair equally.
+Relation to rpdf (structure_control.py compute_rpdf): NOT a replacement.
+rpdf is the geometric pair distribution tool (every pair counts 1) with
+bounding-box and element-pair filters; its histogram is currently divided
+by N r^2 only, not by 4 pi rho r^2 dr, so its large-r level follows the
+model's number density instead of 1 (a fix is planned).  pdf_neutron.py
+computes the TOTAL function to compare with a diffraction experiment:
+normalised so g(r) -> 1 (or G(r) -> 0), and weighted by neutron scattering
+lengths by default, which puts H pairs negative as in measured neutron
+PDFs.  With "-weighting none" it gives the normalised geometric g(r).
+deadmd.py uses it for its PDF fitness metric.  Once rpdf is normalised,
+the neutron weighting could move into rpdf and the two tools merge.
 
 Definitions (Keen, J. Appl. Cryst. 34, 172 (2001)):
     partials   g_ij(r) = n_ij(r) / (N_i 4 pi r^2 dr rho_j)
@@ -73,7 +80,7 @@ def read_skl(path):
             atoms = lines[k + 1:k + 1 + n]
             break
     else:
-        sys.exit(f"gr_neutron.py: no 'fractional' atom list in {path}")
+        sys.exit(f"pdf_neutron.py: no 'fractional' atom list in {path}")
     al, be, ga = (math.radians(x) for x in (al, be, ga))
     cx = c * math.cos(be)
     cy = c * (math.cos(al) - math.cos(be) * math.cos(ga)) / math.sin(ga)
@@ -119,7 +126,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("-i", default="imago.skl")
-    ap.add_argument("-o", default="gr_neutron.plot")
+    ap.add_argument("-o", default="pdf_neutron.plot")
     ap.add_argument("-rmax", type=float, default=10.0)
     ap.add_argument("-dr", type=float, default=0.01)
     ap.add_argument("-sigma", type=float, default=0.05)
@@ -138,7 +145,7 @@ def main():
     if args.weighting == "neutron":
         missing = [e for e in species if e not in SCATTERING_LENGTH]
         if missing:
-            sys.exit(f"gr_neutron.py: no scattering length for {missing}; "
+            sys.exit(f"pdf_neutron.py: no scattering length for {missing}; "
                      "add it to SCATTERING_LENGTH")
         b = np.array([SCATTERING_LENGTH[e] for e in species])
     else:
@@ -175,7 +182,7 @@ def main():
     with open(args.o, "w") as f:
         for ri, vi in zip(r[keep], out[keep]):
             f.write(f"{ri:.4f} {vi:.6f}\n")
-    print(f"gr_neutron.py: {natoms} atoms {species}, rho {rho:.5f} /A^3, "
+    print(f"pdf_neutron.py: {natoms} atoms {species}, rho {rho:.5f} /A^3, "
           f"weighting {args.weighting}, {args.function}(r), sigma "
           f"{args.sigma}, written to r = {r[keep][-1]:.2f} A -> {args.o}")
 

@@ -3,10 +3,10 @@
 ## Copyright (c) 2026 Mohammed Belhadj Larbi
 
 """
-validity_gate.py -- pass/fail check of a condensed model before it is scored.
+deadmd_validity.py -- pass/fail check of a condensed model before it is scored.
 
 USAGE (inside a member's lammps/ directory):
-    validity_gate.py [-dir .] [-valence C 4 6] [-valence B 5 6 ...]
+    deadmd_validity.py [-dir .] [-valence C 4 6] [-valence B 5 6 ...]
                      [-max_strain 0.30]
 
 A model that fails is not a WORSE model, it is an INVALID one (see
@@ -59,7 +59,7 @@ MASS_TO_ELEMENT = {
 def element_of(mass):
     best = min(MASS_TO_ELEMENT, key=lambda m: abs(m - mass))
     if abs(best - mass) > 0.1:
-        sys.exit(f"validity_gate.py: no element with mass {mass}")
+        sys.exit(f"deadmd_validity.py: no element with mass {mass}")
     return MASS_TO_ELEMENT[best]
 
 
@@ -94,7 +94,7 @@ def read_data(path):
             i, j, k = int(words[2]), int(words[3]), int(words[4])
             angles.add((min(i, k), j, max(i, k)))
     if tilt:
-        sys.exit("validity_gate.py: triclinic box not supported")
+        sys.exit("deadmd_validity.py: triclinic box not supported")
     element = {a: element_of(mass[t]) for a, t in typ.items()}
     return np.array(box), element, pos, bonds, angles, r0
 

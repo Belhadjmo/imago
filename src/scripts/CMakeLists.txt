@@ -16,9 +16,9 @@ set (SCRIPTS
    bond_analysis.py build_initial_potentials.py
    cif2skl.py cluster_probe.py cod_fish.py
    collectSYBD.py condense.py curation_manifest.py
-   deadmd.py dump2skl.py
+   deadmd.py deadmd_validity.py dump2skl.py
    element_data.py element_pct.py expand_manifest.py
-   graspElems.py gr_neutron.py
+   graspElems.py
    guidance_db.py guidance_harvest.py guidance_promote.py
    hdf5Comp.py
    imago.py initial_potential_db.py insert3cbo.py interFit.py
@@ -29,14 +29,13 @@ set (SCRIPTS
    nanoTube.py
    org_radwavefn.py osrecurintg.py osrecurintgana.py osrecurintgnum.py
    osrecurintglib.py osrecurintg_makenum.py
-   pdb2skl.py plot_deadmd.py plotgraph.py porosity.py pot2plot.py
+   pdb2skl.py pdf_neutron.py plot_deadmd.py plotgraph.py porosity.py pot2plot.py
    processPOPTC.py
    runIsoAtoms.py
    skl2isaacs.py skl2pdb.py skl2vasp.py struct2skl.py structure_control.py
    symmetry.py
    tidy_scratch.py
    unpackImagoDB.py
-   validity_gate.py
    vasp2skl.py viewCell.py
    xyz2skl.py)
 

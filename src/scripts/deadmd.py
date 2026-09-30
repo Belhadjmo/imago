@@ -212,11 +212,11 @@ within the file does not matter.
     # weight_pdf is greater than zero, a scale-optimised R-factor between
     # each member's G(r) and this reference is added to the fitness as a metric.
     # Omitting either keyword disables the PDF metric entirely.
-    # Each member's G(r) is computed by gr_neutron.py (normalised,
+    # Each member's G(r) is computed by pdf_neutron.py (normalised,
     # G = 4 pi rho r (g - 1)), out to half the member's box width.  For a
-    # CALCULATED reference, make it with gr_neutron.py on the reference
+    # CALCULATED reference, make it with pdf_neutron.py on the reference
     # structure with the same pdf_weighting and pdf_sigma, e.g.
-    #     gr_neutron.py -i ref.skl -o ref_G.dat -rmax 12 -full
+    #     pdf_neutron.py -i ref.skl -o ref_G.dat -rmax 12 -full
     # (-full so the file reaches 10 A).  Old rpdf output is a different,
     # unnormalised quantity and must not be used as the reference.
     exp_pdf_file       ref_G.dat
@@ -228,7 +228,7 @@ within the file does not matter.
     pdf_weighting      neutron
     pdf_sigma          0.05
 
-    # Optional validity gate (validity_gate.py, run on each member's
+    # Optional validity gate (deadmd_validity.py, run on each member's
     # final.data).  A member that fails is INVALID, not worse, and gets
     # the crash sentinel.  Hard checks: every atom's bond count is allowed
     # for its element; final atoms = start - deleted atoms per event x
@@ -317,7 +317,7 @@ BOND_LIMITS = []
 WEIGHT_BOND = 1.0
 
 # Element from a LAMMPS mass (final.data has no element names); same table
-# as validity_gate.py.
+# as deadmd_validity.py.
 MASS_TO_ELEMENT = {
     1.008: "h", 10.811: "b", 12.011: "c", 14.007: "n", 15.999: "o",
     18.998: "f", 28.086: "si", 30.974: "p", 32.06: "s", 35.45: "cl",
@@ -457,10 +457,10 @@ def initialize_population():
     weight_element = 1.0
     weight_pdf     = 0.0
     exp_pdf_file   = None
-    # How gr_neutron.py computes each member's G(r) for the PDF term.
+    # How pdf_neutron.py computes each member's G(r) for the PDF term.
     pdf_weighting  = "neutron"
     pdf_sigma      = 0.05
-    # Validity gate (validity_gate.py): off unless "validity_gate yes".
+    # Validity gate (deadmd_validity.py): off unless "validity_gate yes".
     # "valence El n1 n2 ..." lines override the allowed bond counts;
     # "max_strain" is the largest allowed |bond strain| (fraction).
     validity_gate  = False
@@ -943,7 +943,7 @@ def initialize_population():
         # Load the experimental PDF if the user supplied a file and a
         # positive weight. The file is two-column whitespace-delimited:
         # column 0 is r (Angstrom), column 1 is G(r), on the 0.01 Angstrom
-        # grid gr_neutron.py writes.
+        # grid pdf_neutron.py writes.
         exp_pdf = None
         if exp_pdf_file is not None and weight_pdf > 0.0:
             # Store both columns so fitness_function can align the
@@ -952,7 +952,7 @@ def initialize_population():
             exp_pdf = np.loadtxt(exp_pdf_file)
             # fitness_function aligns the two grids by slicing, so a
             # repeated or backwards r value, or a file that stops short
-            # of the 10 Angstrom gr_neutron.py can reach, would silently fail
+            # of the 10 Angstrom pdf_neutron.py can reach, would silently fail
             # every member.
             if np.any(np.diff(exp_pdf[:, 0]) <= 0):
                 sys.exit(f"[DEAD-MD] {exp_pdf_file}: the r column must be "
@@ -1154,12 +1154,12 @@ def run_member(member_dir, member, cores, gen_count, target_element,
                 f.write(" ".join(f"{el} {x:.4f}" for el, x in comp.items())
                         + "\n")
             # Compute the member's normalised G(r) when a reference PDF has
-            # been loaded. gr_neutron.py reads imago.skl and writes
-            # gr_neutron.plot inside lammps/, out to half the box width.
-            # fitness_function reads gr_neutron.plot later.
+            # been loaded. pdf_neutron.py reads imago.skl and writes
+            # pdf_neutron.plot inside lammps/, out to half the box width.
+            # fitness_function reads pdf_neutron.plot later.
             if exp_pdf is not None:
                 weighting, sigma = pdf_options
-                run(f"gr_neutron.py -weighting {weighting} -sigma {sigma}",
+                run(f"pdf_neutron.py -weighting {weighting} -sigma {sigma}",
                     lammps_dir)
             # Final atom count, printed by the lammps.in tail that
             # condense.py writes. The fitness divides the total
@@ -1174,12 +1174,12 @@ def run_member(member_dir, member, cores, gen_count, target_element,
                 f.write(f"{natoms}\n")
             # Validity gate: an invalid model (wrong coordination, broken
             # bookkeeping, absurd bond strain) is not scored at all.
-            # validity_gate.py writes its reasons to validity.txt;
+            # deadmd_validity.py writes its reasons to validity.txt;
             # validity_evolve gets 1 (valid) or 0, and fitness_function
             # gives a 0 the crash sentinel.
             if gate_options is not None:
                 gate_valence, gate_strain = gate_options
-                cmd = f"validity_gate.py -max_strain {gate_strain}"
+                cmd = f"deadmd_validity.py -max_strain {gate_strain}"
                 for el, counts_allowed in gate_valence.items():
                     cmd += (f" -valence {el} "
                             + " ".join(map(str, counts_allowed)))
@@ -1375,15 +1375,15 @@ def compute_pdf_rfactor(sim_pdf_file, exp_pdf_file):
     Both files must have two columns: r (Angstrom) and G(r), with a
     0.01 Angstrom increment. The experimental file may extend beyond
     10 Angstrom; it is truncated to r <= 10 Angstrom to match the
-    range of the simulated gr_neutron.plot output.
+    range of the simulated pdf_neutron.plot output.
 
     This is the public entry point intended for use outside deadmd.py.
     Internally, fitness_function calls _pdf_rfactor directly to avoid
     reloading the experimental file on every member every generation.
 
     Args:
-        sim_pdf_file (str): Path to the simulated gr_neutron.plot file
-            produced by gr_neutron.py.
+        sim_pdf_file (str): Path to the simulated pdf_neutron.plot file
+            produced by pdf_neutron.py.
         exp_pdf_file (str): Path to the experimental G(r) data file
             (two-column: r, G(r)).
 
@@ -1474,7 +1474,7 @@ def fitness_function(population, population_size, gen_count, energy_ref,
          both directions of deviation are penalized symmetrically.
 
       4. PDF R-factor term (optional) -- scale-optimised R-factor between
-         the member's G(r) from gr_neutron.py (to half its box width) and
+         the member's G(r) from pdf_neutron.py (to half its box width) and
          the reference G(r) over the same r range. The optimal scale factor s is found analytically:
              s        = (G_sim . G_exp) / |G_sim|^2
              pdf_term = sqrt( sum((s*G_sim - G_exp)^2) / sum(G_exp^2) )
@@ -1645,18 +1645,18 @@ def fitness_function(population, population_size, gen_count, energy_ref,
                 ff.write(f"{bond_term}\n")
 
         # --- Optional PDF R-factor term ----------------------------------
-        # Read gr_neutron.plot (inside lammps/) and compute a
+        # Read pdf_neutron.plot (inside lammps/) and compute a
         # scale-optimised R-factor against the experimental G(r). The
         # optimal scalar s is determined analytically:
         #   s = (G_sim . G_exp) / |G_sim|^2
         # so the comparison is insensitive to the overall amplitude -- only
         # peak positions, relative heights and signs matter.
-        # If gr_neutron.plot is missing or degenerate the member is failed with
+        # If pdf_neutron.plot is missing or degenerate the member is failed with
         # SENTINEL so the EA discards it via selection/kill_rate.
         pdf_term = 0.0
         if use_pdf:
             rpdf_file = (f"generation_{gen_count}/{member_dir}"
-                         f"/lammps/gr_neutron.plot")
+                         f"/lammps/pdf_neutron.plot")
             try:
                 sim_data  = np.loadtxt(rpdf_file)
                 r_sim     = sim_data[:, 0]
